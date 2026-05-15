@@ -73,7 +73,7 @@ nav.sc {
 }
 
 .nr a {
-  font-size: 11px;
+  font-size: 13px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   text-decoration: none;
@@ -129,7 +129,8 @@ nav.sc {
 
 .h-row {
   overflow: hidden;
-  line-height: 1.0;
+  line-height: 1.2;
+  padding-bottom: 0.1em;
 }
 
 .h-name {
@@ -245,7 +246,20 @@ section:not(.hero) {
   letter-spacing: -0.02em;
   margin-bottom: 24px;
 }
-
+.left-wrap{
+  display: flex;
+  margin-bottom: 28px;
+  gap: 32px;
+  align-items: center;
+}
+.left-wrap img{
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  object-position: center 20%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
 .abody {
   font-size: 15px;
   line-height: 1.9;
