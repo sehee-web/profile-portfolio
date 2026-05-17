@@ -417,6 +417,30 @@ section:not(.hero) {
   border: 1px solid var(--border);
 }
 
+.thumb-multi {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 30px;
+  width: 100%;
+  height: 100%;
+}
+
+.thumb-multi img {
+  height: auto;
+  object-fit: contain;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+  display: block;
+}
+/* 왼쪽 포스터 */
+.thumb-multi img:first-child {
+  width: 42%;
+}
+
+/* 오른쪽 포스터 */
+.thumb-multi img:last-child {
+  width: 36%;
+}
 .wfeat-body {
   padding: 48px 40px;
   display: flex;
@@ -455,6 +479,12 @@ section:not(.hero) {
   line-height: 1.85;
   color: var(--muted);
   margin: 20px 0 32px;
+}
+
+.wfeat-desc1{
+  font-size: 18px;
+  font-weight: 400;
+  color: #56493f;
 }
 .wfeat-plan{
   margin-bottom: 20px ;
