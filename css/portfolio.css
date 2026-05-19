@@ -71,14 +71,11 @@ body::after {
   position: fixed;
   inset: 0;
   z-index: 10;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 #cv-env {
-  position: relative;
-  filter: drop-shadow(0 20px 60px rgba(0,0,0,.55)) drop-shadow(0 4px 12px rgba(0,0,0,.4));
+  position: absolute;
+  inset: 0;
 }
 
 #cv-body {
@@ -94,6 +91,12 @@ body::after {
   left: 0; top: 0;
   z-index: 2;
   will-change: transform;
+  transform: translateZ(0);
+  image-rendering: auto;
+  /* clip-path 경계 안티앨리어싱 */
+  filter: blur(0px);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
 }
 
 #cv-tz {

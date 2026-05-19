@@ -168,7 +168,7 @@
     /* PORTFOLIO 텍스트 */
     ctx.textAlign    = 'center';
     ctx.textBaseline = 'middle';
-    ctx.font         = '300 ' + Math.round(FH * 0.28) + 'px "Cormorant Garamond"';
+    ctx.font         = '400 ' + Math.round(FH * 0.28) + 'px "Cormorant Garamond"';
     ctx.fillStyle    = 'rgba(40,18,3,.55)';
     ctx.fillText('PORTFOLIO', EW / 2, FH / 2);
 
@@ -210,7 +210,7 @@
     ctx.save();
     ctx.textAlign    = 'center';
     ctx.textBaseline = 'middle';
-    ctx.font         = '500 ' + Math.round(SH * 0.48) + 'px "Noto Serif KR", monospace';
+    ctx.font         = '500 ' + Math.round(SH * 0.48) + 'px "Pretendard", sans-serif';
     ctx.fillStyle    = 'rgba(90,48,8,.65)';
     var BLOCK = 200;
     for (var bx = BLOCK / 2; bx < EW; bx += BLOCK) {
@@ -248,102 +248,135 @@
   }
 
   /* ── curl 렌더링 (아르키메데스 나선) ── */
-  function drawCurl(p) {
-    var ctx = $cc.getContext('2d');
-    ctx.clearRect(0, 0, $cc.width, $cc.height);
+  /* ── curl 렌더링 — 연속 trapezoid 방식으로 깨짐 방지 ── */
+function drawCurl(p) {
+  var ctx = $cc.getContext('2d');
+  ctx.clearRect(0, 0, $cc.width, $cc.height);
 
-    var tearX = p * EW;
-    if (tearX < 1) return;
+  var tearX = p * EW;
+  if (tearX < 1) return;
 
-    var CH       = $cc.height;
-    var baseY    = CH - 12;
-    var thetaMax = Math.sqrt(2 * tearX / a_spiral);
-    if (thetaMax < 0.01) return;
+  var CH       = $cc.height;
+  var baseY    = CH - 12;
+  var thetaMax = Math.sqrt(2 * tearX / a_spiral)* 0.7;
+  if (thetaMax < 0.01) return;
 
-    var cx = tearX, cy = baseY;
-    var N  = SEGS + 1;
-    var pts = new Array(N);
-    for (var s = 0; s < N; s++) {
-      var theta  = (s / SEGS) * thetaMax;
-      var r      = a_spiral * theta;
-      pts[s] = {
-        theta:  theta,
-        r:      r,
-        sx:     cx - r * Math.sin(theta),
-        sy:     cy - r * (1 - Math.cos(theta)),
-        scaleY: Math.cos(theta % (2 * Math.PI))
-      };
-    }
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
 
-    for (var s = SEGS - 1; s >= 0; s--) {
-      var p0 = pts[s], p1 = pts[s + 1];
-      var thM     = (p0.theta + p1.theta) * .5;
-      var fM      = thM % (2 * Math.PI);
-      var scaleYm = Math.cos(fM);
-      var absY    = Math.abs((p0.scaleY + p1.scaleY) * .5);
-      var isBack  = scaleYm < 0;
-      if (absY < 0.012) continue;
+  /* 나선 위 각 점 좌표 사전 계산 */
+  var N   = SEGS + 1;
+  var pts = new Array(N);
+  for (var s = 0; s < N; s++) {
+    var theta  = (s / SEGS) * thetaMax;
+    var r      = a_spiral * theta;
+    pts[s] = {
+      theta:  theta,
+      sx:     tearX - r * Math.sin(theta),
+      sy:     baseY - r * (1 - Math.cos(theta)),
+      scaleY: Math.cos(theta % (2 * Math.PI))
+    };
+  }
 
-      var dx   = Math.min(p0.sx, p1.sx);
-      var dw   = Math.abs(p1.sx - p0.sx) + 1.5;
-      var dy   = (p0.sy + p1.sy) * .5;
+  /* 앞면/뒷면 구분해서 사다리꼴(trapezoid)로 연속 렌더
+     각 슬라이스를 ctx.transform으로 기울여 경계를 자연스럽게 연결 */
+  for (var s = SEGS - 1; s >= 0; s--) {
+    var p0 = pts[s], p1 = pts[s + 1];
+    var thM     = (p0.theta + p1.theta) * 0.5;
+    var fM      = thM % (2 * Math.PI);
+    var scaleYm = Math.cos(fM);
+    var absY0   = Math.abs(p0.scaleY);
+    var absY1   = Math.abs(p1.scaleY);
+    var absYm   = Math.abs((absY0 + absY1) * 0.5);
+    var isBack  = scaleYm < 0;
+
+    if (absYm < 0.01) continue;
+
+    /* 슬라이스 양 끝의 화면 좌표와 높이 */
+    var x0 = p0.sx, x1 = p1.sx;
+    var cy0 = p0.sy, cy1 = p1.sy;
+    var h0  = SH * absY0;
+    var h1  = SH * absY1;
+
+    /* 사다리꼴 4점 */
+    var tlx = x0, tly = cy0 - h0 * 0.5;
+    var trx = x1, try_ = cy1 - h1 * 0.5;
+    var brx = x1, bry = cy1 + h1 * 0.5;
+    var blx = x0, bly = cy0 + h0 * 0.5;
+
+    /* 클리핑 경로로 사다리꼴 설정 */
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(tlx, tly);
+    ctx.lineTo(trx, try_);
+    ctx.lineTo(brx, bry);
+    ctx.lineTo(blx, bly);
+    ctx.closePath();
+    ctx.clip();
+
+    if (isBack) {
+      /* 뒷면: 크림색 */
+      ctx.fillStyle = '#ddc898';
+      ctx.fillRect(tlx, Math.min(tly, try_) - 1, Math.abs(trx - tlx) + 1, Math.max(bly, bry) - Math.min(tly, try_) + 2);
+      var bg = ctx.createLinearGradient(0, cy0 - SH * 0.5, 0, cy0 + SH * 0.5);
+      bg.addColorStop(0,    'rgba(40,20,3,.45)');
+      bg.addColorStop(0.45, 'rgba(40,20,3,.07)');
+      bg.addColorStop(0.55, 'rgba(40,20,3,.07)');
+      bg.addColorStop(1,    'rgba(40,20,3,.45)');
+      ctx.fillStyle = bg;
+      ctx.fillRect(tlx, Math.min(tly, try_) - 1, Math.abs(trx - tlx) + 1, Math.max(bly, bry) - Math.min(tly, try_) + 2);
+    } else {
+      /* 앞면: 텍스처를 사다리꼴에 맞게 transform으로 매핑 */
       var srcX = Math.floor((s / SEGS) * tearX);
       var srcW = Math.max(1, Math.ceil(tearX / SEGS) + 1);
+      var src  = stripImg || $sc;
 
-      ctx.save();
-      ctx.translate(dx, dy);
-      ctx.scale(1, absY);
-      ctx.translate(0, -SH * .5);
+      /* 사다리꼴 너비/높이에 맞게 transform 설정 */
+      var sliceW = Math.abs(x1 - x0) + 1;
+      var scaleX_val = sliceW / Math.max(srcW, 1);
+      var skewY_val  = (cy1 - cy0) / Math.max(sliceW, 1);
 
-      if (isBack) {
-        ctx.globalAlpha = Math.min(1, absY * 4);
-        ctx.fillStyle = '#ddc898';
-        ctx.fillRect(0, 0, dw, SH);
-        var bg = ctx.createLinearGradient(0, 0, 0, SH);
-        bg.addColorStop(0,    'rgba(40,20,3,.45)');
-        bg.addColorStop(0.45, 'rgba(40,20,3,.07)');
-        bg.addColorStop(0.55, 'rgba(40,20,3,.07)');
-        bg.addColorStop(1,    'rgba(40,20,3,.45)');
-        ctx.globalAlpha = Math.min(1, absY * 2.5);
-        ctx.fillStyle = bg;
-        ctx.fillRect(0, 0, dw, SH);
-      } else {
-        ctx.globalAlpha = 1;
-        var src = stripImg || $sc;
-        ctx.drawImage(src, srcX, 0, srcW, SH, 0, 0, dw, SH);
+      ctx.transform(
+        scaleX_val, skewY_val,
+        0,          1,
+        x0 < x1 ? x0 : x1, cy0 - h0 * 0.5
+      );
+      ctx.drawImage(src, srcX, 0, srcW, SH, 0, 0, srcW, SH);
+      ctx.setTransform(1, 0, 0, 1, 0, 0); /* 리셋 */
 
-        var shadow = (1 - absY) * .85;
-        if (shadow > .01) {
-          ctx.globalAlpha = shadow;
-          ctx.fillStyle   = '#040100';
-          ctx.fillRect(0, 0, dw, SH);
-        }
-
-        var hl = Math.max(0, (absY - .68) / .32) * .52;
-        if (hl > .01) {
-          ctx.globalAlpha = hl;
-          var hg = ctx.createLinearGradient(0, 0, 0, SH);
-          hg.addColorStop(0,    'rgba(255,245,208,.95)');
-          hg.addColorStop(0.28, 'rgba(255,245,208,.3)');
-          hg.addColorStop(1,    'transparent');
-          ctx.fillStyle = hg;
-          ctx.fillRect(0, 0, dw, SH);
-        }
+      /* 곡면 음영 */
+      var shadow = (1 - absYm) * 0.82;
+      if (shadow > 0.01) {
+        ctx.fillStyle   = 'rgba(4,1,0,' + shadow + ')';
+        ctx.fillRect(tlx, Math.min(tly, try_) - 1, Math.abs(trx - tlx) + 1, Math.max(bly, bry) - Math.min(tly, try_) + 2);
       }
-      ctx.restore();
+
+      /* 정점 하이라이트 */
+      var hl = Math.max(0, (absYm - 0.68) / 0.32) * 0.52;
+      if (hl > 0.01) {
+        var hg = ctx.createLinearGradient(0, cy0 - SH * 0.5, 0, cy0 + SH * 0.5);
+        hg.addColorStop(0,    'rgba(255,245,208,' + hl + ')');
+        hg.addColorStop(0.28, 'rgba(255,245,208,' + (hl * 0.3) + ')');
+        hg.addColorStop(1,    'rgba(255,245,208,0)');
+        ctx.fillStyle = hg;
+        ctx.fillRect(tlx, Math.min(tly, try_) - 1, Math.abs(trx - tlx) + 1, Math.max(bly, bry) - Math.min(tly, try_) + 2);
+      }
     }
 
-    /* 뜯기 전선 그림자 */
-    if (tearX > 3) {
-      ctx.save();
-      var eg = ctx.createLinearGradient(tearX - 10, 0, tearX, 0);
-      eg.addColorStop(0, 'transparent');
-      eg.addColorStop(1, 'rgba(0,0,0,.5)');
-      ctx.fillStyle = eg;
-      ctx.fillRect(Math.max(0, tearX - 10), baseY - SH, 10, SH);
-      ctx.restore();
-    }
+    ctx.restore();
   }
+
+  /* 뜯기 전선 그림자 */
+  if (tearX > 3) {
+    ctx.save();
+    var eg = ctx.createLinearGradient(tearX - 10, 0, tearX, 0);
+    eg.addColorStop(0, 'transparent');
+    eg.addColorStop(1, 'rgba(0,0,0,.5)');
+    ctx.fillStyle = eg;
+    ctx.fillRect(Math.max(0, tearX - 10), baseY - SH, 10, SH);
+    ctx.restore();
+  }
+}
 
   /* ── 렌더 루프 ── */
   function render() {
@@ -444,10 +477,9 @@
     VW = window.innerWidth;
     VH = window.innerHeight;
 
-    var maxW = VW * .88;
-    var maxH = VH * .82;
-    EW = Math.min(maxW, maxH * ENV_RATIO);
-    EH = EW / ENV_RATIO;
+    /* 봉투 = 화면 전체 */
+    EW = VW;
+    EH = VH;
     FH = Math.round(EH * FLAP_RATIO);
 
     $env.style.width  = EW + 'px';
