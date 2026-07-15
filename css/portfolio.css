@@ -566,7 +566,8 @@ section:not(.hero) { padding: 96px 6vw; }
   align-items: center;
   gap: 8px;
   padding: 8px 18px;
-  font-size: 12px;
+  font-size: 14px;
+  font-weight: 600;
   letter-spacing: 0.08em;
   color: var(--accent);
   border: 1px solid var(--accent);
